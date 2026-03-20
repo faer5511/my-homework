@@ -316,3 +316,83 @@ html, body{
     border-color: #cb6e6e;
     box-shadow: 0 0 4px rgba(203, 110, 110, 0.3);
 }
+
+
+/* ===== ФОРМА ДОБАВЛЕНИЯ ЗАДАЧИ ===== */
+
+.form-add{
+    display: flex;
+    gap: 10px;
+    margin-top: 30px;
+}
+
+/* Поле ввода */
+.form-add_input{
+    flex: 1;
+    padding: 12px 16px;
+    font-size: 14px;
+    border: 1px solid rgba(30, 10, 60, 0.12);
+    border-radius: 8px;
+    background: #ffffff;
+    color: #1e0a3c;
+    transition: border-color .2s ease, box-shadow .2s ease;
+}
+
+/* Плейсхолдер */
+.form-add_input::placeholder{
+    color: #9b96a6;
+}
+
+/* Hover */
+.form-add_input:hover{
+    border-color: rgba(30, 10, 60, 0.2);
+}
+
+/* Focus */
+.form-add_input:focus{
+    outline: none;
+    border-color: #7e66cd;
+    box-shadow: 0 0 0 3px rgba(126, 102, 205, 0.25);
+}
+
+/* Кнопка */
+.form-add_button{
+    padding: 12px 18px;
+    font-size: 14px;
+    font-weight: 500;
+    border-radius: 8px;
+    border: 1px solid #7e66cd;
+    background: #7e66cd;
+    color: #fff;
+    cursor: pointer;
+    transition: background .2s ease, transform .1s ease, box-shadow .2s ease;
+}
+
+/* Hover */
+.form-add_button:hover{
+    background: #6d57b8;
+    box-shadow: 0 4px 10px rgba(126, 102, 205, 0.25);
+}
+
+/* Active */
+.form-add_button:active{
+    transform: translateY(1px);
+    background: #5d47aa;
+}
+
+/* Focus */
+.form-add_button:focus-visible{
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(126, 102, 205, 0.35);
+}
+
+/* ===== АДАПТИВ ДЛЯ МОБИЛЬНЫХ ===== */
+@media (max-width: 600px){
+    .form-add{
+        flex-direction: column;
+    }
+
+    .form-add_button{
+        width: 100%;
+    }
+}
