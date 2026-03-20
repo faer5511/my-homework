@@ -311,6 +311,211 @@ else timeOfDay = "Вечер";
 
 console.log(`Сегодня ${dayName}, сейчас ${timeOfDay}`);
 
+document.addEventListener('DOMContentLoaded', () => {
+    // ===== Элементы страницы =====
+    const input = document.querySelector('.task-input');
+    const form = document.querySelector('.form-add');
+    const footer = document.querySelector('.footer-controls');
+    const sortSelect = document.querySelector('.toolbar_sort');
+    const searchInput = document.querySelector('.toolbar_search');
+    const tabButtons = document.querySelectorAll('.tabs_item');
+    const clearButton = document.querySelector('.footer-clear');
+
+    // ===== Переменные =====
+    let tasks = JSON.parse(localStorage.getItem('tasks')) || [];
+    let sortOrder = 'new'; // new / old / az / za
+    let currentFilter = 'all'; // all / active / done
+
+    // ===== Форматирование даты =====
+    function formatDate(date){
+        const d = date.getDate().toString().padStart(2,'0');
+        const m = (date.getMonth()+1).toString().padStart(2,'0');
+        const y = date.getFullYear();
+        const h = date.getHours().toString().padStart(2,'0');
+        const min = date.getMinutes().toString().padStart(2,'0');
+        return `${d}.${m}.${y}, ${h}:${min}`;
+    }
+
+    // ===== Сохранение задач в LocalStorage =====
+    function saveTasks(){
+        localStorage.setItem('tasks', JSON.stringify(tasks));
+    }
+
+    // ===== Обновление счётчиков =====
+    function updateCounters(){
+        const total = tasks.length;
+        const active = tasks.filter(t => !t.done).length;
+        const done = tasks.filter(t => t.done).length;
+        
+        if(clearButton){
+            clearButton.disabled = tasks.every(t => !t.done);
+        }
+        
+        const counters = document.querySelector('.footer-controls_counters');
+        if(counters){
+            counters.innerHTML = `
+                <span>Всего: ${total}</span>
+                <span>Активных: ${active}</span>
+                <span>Выполненных: ${done}</span>
+            `;
+        }
+    }
+
+    // ===== Рендер одной задачи =====
+    function renderTask(task){
+        const card = document.createElement('div');
+        card.className = 'task';
+        if(task.done) card.classList.add('task--done');
+
+        card.innerHTML = `
+            <div class="task_content">
+                <div class="task_title">${task.text}</div>
+                <div class="task_meta">${task.date}</div>
+            </div>
+            <div class="task_actions">
+                <button class="task_action task_action--delete" title="Удалить">
+                    <svg class="task_icon" viewBox="0 0 24 24" fill="none" stroke="#cb6e6e" stroke-width="2">
+                        <polyline points="3 6 5 6 21 6" />
+                        <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+                        <path d="M10 11v6" /><path d="M14 11v6" />
+                        <path d="M9 6V4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2" />
+                    </svg>
+                </button>
+            </div>
+        `;
+
+        // Смена статуса задачи (клик по карточке, но не по кнопке)
+        card.addEventListener('click', e => {
+            if(e.target.closest('.task_action')) return;
+            task.done = !task.done;
+            saveTasks();
+            renderAll();
+        });
+
+        // Удаление задачи
+        card.querySelector('.task_action').addEventListener('click', (e) => {
+            e.stopPropagation();
+            tasks = tasks.filter(t => t.id !== task.id);
+            saveTasks();
+            renderAll();
+        });
+
+        return card;
+    }
+
+    // ===== Добавление задачи =====
+    function addTask(){
+        const text = input.value.trim();
+        if(!text || text.length < 3){
+            input.classList.add('input--error');
+            return;
+        }
+        input.classList.remove('input--error');
+
+        const newTask = {
+            id: Date.now(),
+            text,
+            done: false,
+            date: formatDate(new Date())
+        };
+
+        tasks.push(newTask);
+        input.value = '';
+        saveTasks();
+        renderAll();
+    }
+
+    // ===== Событие отправки формы =====
+    form.addEventListener('submit', e => {
+        e.preventDefault();
+        addTask();
+    });
+
+    // ===== Сортировка =====
+    if(sortSelect){
+        sortSelect.addEventListener('change', () => {
+            const val = sortSelect.value;
+            if(val.includes('новые')) sortOrder = 'new';
+            else if(val.includes('старые')) sortOrder = 'old';
+            else if(val.includes('A→Z')) sortOrder = 'az';
+            else if(val.includes('Z→A')) sortOrder = 'za';
+            renderAll();
+        });
+    }
+
+    // ===== Фильтры (табы) =====
+    tabButtons.forEach(btn => {
+        btn.addEventListener('click', () => {
+            tabButtons.forEach(b => b.classList.remove('tabs_item--active'));
+            btn.classList.add('tabs_item--active');
+
+            const text = btn.textContent.toLowerCase();
+            if(text.includes('активные')) currentFilter = 'active';
+            else if(text.includes('завершённые')) currentFilter = 'done';
+            else currentFilter = 'all';
+            renderAll();
+        });
+    });
+
+    // ===== Поиск =====
+    if(searchInput){
+        searchInput.addEventListener('input', () => {
+            renderAll();
+        });
+    }
+
+    // ===== Очистка выполненных =====
+    if(clearButton){
+        clearButton.addEventListener('click', () => {
+            tasks = tasks.filter(t => !t.done);
+            saveTasks();
+            renderAll();
+        });
+    }
+
+    // ===== Рендер всех задач =====
+    function renderAll(){
+        if(!footer) return;
+        
+        // Очищаем текущие карточки
+        document.querySelectorAll('.task').forEach(t => t.remove());
+
+        // Фильтруем задачи
+        let filtered = tasks.filter(task => {
+            if(currentFilter === 'active') return !task.done;
+            if(currentFilter === 'done') return task.done;
+            return true;
+        });
+
+        // Применяем поиск
+        const query = searchInput?.value.trim().toLowerCase();
+        if(query){
+            filtered = filtered.filter(task => 
+                task.text.toLowerCase().includes(query)
+            );
+        }
+
+        // Сортировка
+        filtered.sort((a,b) => {
+            if(sortOrder === 'new') return b.id - a.id;
+            if(sortOrder === 'old') return a.id - b.id;
+            if(sortOrder === 'az') return a.text.localeCompare(b.text);
+            if(sortOrder === 'za') return b.text.localeCompare(a.text);
+            return 0;
+        });
+
+        // Добавляем карточки перед футером
+        filtered.forEach(task => footer.before(renderTask(task)));
+
+        // Обновляем счётчики
+        updateCounters();
+    }
+
+    // ===== Первичный рендер =====
+    renderAll();
+});
+
+
 /* ============================================ */
 /* ============ ДОМАШНЕЕ ЗАДАНИЕ ============== */
 /* ===== (код, который ты написал сам) ======== */
@@ -641,27 +846,3 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 });
-
-// ==================== ДОПОЛНИТЕЛЬНЫЕ ЭКСПЕРИМЕНТЫ (ДЗ) ====================
-
-// Функция для поиска задачи по частичному совпадению
-function findTaskByPartialTitle(tasks, keyword) {
-    const results = tasks.filter(task => 
-        task.title.toLowerCase().includes(keyword.toLowerCase())
-    );
-    return results.length ? results : "Задачи не найдены";
-}
-
-console.log("\n=== ДОПОЛНИТЕЛЬНЫЕ ЭКСПЕРИМЕНТЫ (ДЗ) ===");
-console.log("Частичный поиск 'дел':", findTaskByPartialTitle(tasksFull, 'дел'));
-
-// Демонстрация поиска
-function demonstrateSearch(searchQueries) {
-    console.log("\nДемонстрация поиска:");
-    searchQueries.forEach(query => {
-        const result = findTaskByKeyword(tasksFull, query);
-        console.log(`"${query}":`, result);
-    });
-}
-
-demonstrateSearch(["Купить", "Позвонить", "Несуществующее"]);
